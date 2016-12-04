@@ -61,17 +61,19 @@ public class Paging {
             numProcesses = 1;
         } 
 
+        int time = 1;
         for (int k = 0; k < (int) Math.ceil((double) numRef * numProcesses / 3); k++){
             // each process
             for (int i = 0; i < numProcesses; i++){
                 // should go three times
                 for (int j = 0; j < 3; j++){
                     // unless it has already gone enough times
-                    if (processArr[i].count >= numRef){
+                    if (processArr[i].count >= numRef - 1){
                         break;
                     } else {
-                        System.out.printf("Process %d \n", i+1);
                         processArr[i].count++;
+                        System.out.printf("Process %d references word %d (page XX) at time %d\n", i+1, processArr[i].refs[processArr[i].count], time);
+                        time++;
                     }
                     
                 }
@@ -87,21 +89,27 @@ public class Paging {
         if (jobMix == 1 || jobMix == 4){
             int w = (111 * 1 + processSize) % processSize;
             processArr = new Process[1];
+            int[] refs = new int[numRef];
             processArr[0] = new Process(w);
             for (int i = 0; i < numRef; i++){
                 System.out.println(w);
+                refs[i] = w;
                 w = (w + 1 + processSize) % processSize;
-            } 
+            }
+            processArr[0].refs = refs;
         } else {
             int k = 1;
             processArr = new Process[4];
             for (int i = 0; i < 4; i ++){
-                int w = (111 * 1 + processSize) % processSize;
+                int[] refs = new int[numRef];
+                int w = (111 * (i+1) + processSize) % processSize;
                 processArr[i] = new Process(w);
                 for (int j = 0; j < numRef; j++){
                     System.out.println(w);
+                    refs[j] = w;
                     w = (w + 1 + processSize) % processSize;
                 }
+                processArr[i].refs = refs;
                 k++;
             }
         }
@@ -109,7 +117,7 @@ public class Paging {
     }
 
     public static Entry[][] createFrameTable(int machineSize, int pageSize, int processSize, int jobMix, int numRef, int debug){
-        Entry[][] frameTable = new Entry[machineSize/pageSize][pageSize];
+        Entry[][] frameTable = new Entry[machineSize / pageSize][pageSize];
         for (int i = 0; i < machineSize/pageSize; i++){
             for (int j = 0; j < pageSize; j++){
                 frameTable[i][j] = new Entry(-1, -1, -1, -1);
@@ -146,10 +154,11 @@ public class Paging {
 
 class Process {
     public int w;
-    public int count = 0;
+    public int count = -1;
     public int faults = 0;
     public int evictions = 0;
     public int residencyTime = 0; // time that the page was evicted minus the time it was loaded.
+    public int[] refs;
 
     public Process(int w){
         this.w = w;
