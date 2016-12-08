@@ -215,6 +215,17 @@ public class Paging {
                 System.out.printf("%d uses random number: %d.\n", process.processNum, randEvict);
                 toEvict = randEvict % frameTable.length;
             }
+            else if (algo.equals("lifo")){
+                // see which one was the last one in
+                int maxTime = Integer.MIN_VALUE;
+                toEvict = -1;
+                for (int i = 0; i < frameTable.length; i++){
+                    if (frameTable[i][0].loadTime > maxTime){
+                        maxTime = frameTable[i][0].loadTime;
+                        toEvict = i;
+                    }
+                }
+            }
             message = "evicting page " + frameTable[toEvict][0].pageNum + " of process " + frameTable[toEvict][0].processNum + " from frame " + toEvict;
             processArr[frameTable[toEvict][0].processNum - 1].residencyTime += (time - frameTable[toEvict][0].loadTime);
             processArr[frameTable[toEvict][0].processNum - 1].evictions++;
