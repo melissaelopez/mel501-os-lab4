@@ -79,7 +79,7 @@ public class Paging {
                         int requestedPage = (processArr[i].refs[processArr[i].count] / pageSize);
                         String message = checkFrameTable(frameTable, processArr[i], requestedPage, time, "lru", processArr);
                         System.out.printf("Process %d references word %d (page %d) at time %d: %s \n", i+1, processArr[i].refs[processArr[i].count], requestedPage, time, message);
-                        //printFrameTable(frameTable);
+                        printFrameTable(frameTable);
                         time++;
                     }
                     
@@ -135,14 +135,15 @@ public class Paging {
     }
 
     public static void printFrameTable(Entry[][] frameTable){
-        System.out.printf("+----------+----------+----+----+----+----+----+----+----+----+----+----+\n");
+        System.out.printf("+----------+----------+----------+----+----+----+----+----+----+----+----+----+----+\n");
         for (int i = 0; i < frameTable.length; i++){
             System.out.printf("| Frame %2d |", i);
             System.out.printf("P#%2d Pg%2d |", frameTable[i][0].processNum, frameTable[i][0].pageNum);
+            System.out.printf("  Last: %2d |", frameTable[i][0].lastTimeUsed);
             for (int j = 0; j < frameTable[0].length; j++){
                 System.out.printf("%3d |", frameTable[i][j].address);
             }
-            System.out.printf("\n+----------+----------+----+----+----+----+----+----+----+----+----+----+");
+            System.out.printf("\n+----------+----------+----------+----+----+----+----+----+----+----+----+----+----+");
             System.out.printf("\n");
         }
     }
@@ -223,6 +224,7 @@ public class Paging {
             frameTable[highestFreeFrame][i] = new Entry(pageAddress, time, process.processNum, requestedPage);
             pageAddress++;
         }
+        frameTable[highestFreeFrame][0].lastTimeUsed = time;
         return highestFreeFrame;
     }
 
