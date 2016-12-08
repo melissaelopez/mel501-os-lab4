@@ -94,16 +94,42 @@ public class Paging {
                                 int rand = randomOS(scanner);
                                 if (j == 0 && i >= 1){
                                     System.out.printf("%d uses random number: %d.\n", i, rand);
-                                    //System.out.printf("the next ref for process %d should be: %d\n", i, rand % processSize);
-                                    if (processArr[i-i].count + 1 < numRef){
-                                        processArr[i-i].refs[processArr[i-1].count] = rand % processSize;
+                                    //System.out.printf("the next ref for process %d should be (1): %d\n", i, rand % processSize);
+                                    
+                                    if (processArr[i-1].count + 1 < numRef){
+                                        processArr[i-1].refs[processArr[i-1].count + 1] = rand % processSize;
+                                        // System.out.printf("******Changes made to processArr[%d]");
                                     }
+                                    // String refs = "";
+                                    // for (int m = 0; m < numRef; m++){
+                                    //     refs += Integer.toString(processArr[0].refs[m]);
+                                    // }
+                                    // System.out.printf("ARRAY OF REFS FOR PROCESS #!: %s\n", refs);
+                                } else if (j == 0 && i == 0){
+                                    System.out.printf("%d uses random number: %d.\n", 4, rand);
+                                    //System.out.printf("the next ref for process %d should be (2): %d\n", 4, rand % processSize);
+                                    
+                                    if (processArr[3].count + 1 < numRef){
+                                        processArr[3].refs[processArr[3].count] = rand % processSize;
+                                        // System.out.printf("******Changes made to processArr[%d]");
+                                    }
+                                    // String refs = "";
+                                    // for (int m = 0; m < numRef; m++){
+                                    //     refs += Integer.toString(processArr[0].refs[m]);
+                                    // }
+                                    //System.out.printf("ARRAY OF REFS FOR PROCESS #!: %s\n", refs);
                                 } else {
                                     System.out.printf("%d uses random number: %d.\n", i+1, rand);
-                                    //System.out.printf("the next ref for process %d should be: %d\n", i+1, rand % processSize);
+                                    //System.out.printf("the next ref for process %d should be (3): %d\n", i+1, rand % processSize);
+                                    
                                     if (processArr[i].count + 1 < numRef){
                                         processArr[i].refs[processArr[i].count] = rand % processSize;
                                     }
+                                    // String refs = "";
+                                    // for (int m = 0; m < numRef; m++){
+                                    //     refs += Integer.toString(processArr[0].refs[m]);
+                                    // }
+                                    //System.out.printf("ARRAY OF REFS FOR PROCESS #!: %s\n", refs);
                                 }
                                 
                             } else {
