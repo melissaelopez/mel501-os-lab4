@@ -85,14 +85,37 @@ public class Paging {
                     if (processArr[i].count >= numRef - 1){
                         break;
                     } else {
+                        //System.out.printf("****** j = %d ******\n", j);
                         processArr[i].count++;
+                        int requestedPage = 0;
                         // find the requested page number
-
-                        int requestedPage = (processArr[i].refs[processArr[i].count] / pageSize);
+                        if (jobMix == 3){
+                            if (processArr[0].count != 0){
+                                int rand = randomOS(scanner);
+                                if (j == 0 && i >= 1){
+                                    System.out.printf("%d uses random number: %d.\n", i, rand);
+                                    //System.out.printf("the next ref for process %d should be: %d\n", i, rand % processSize);
+                                    if (processArr[i-i].count + 1 < numRef){
+                                        processArr[i-i].refs[processArr[i-1].count] = rand % processSize;
+                                    }
+                                } else {
+                                    System.out.printf("%d uses random number: %d.\n", i+1, rand);
+                                    //System.out.printf("the next ref for process %d should be: %d\n", i+1, rand % processSize);
+                                    if (processArr[i].count + 1 < numRef){
+                                        processArr[i].refs[processArr[i].count] = rand % processSize;
+                                    }
+                                }
+                                
+                            } else {
+                                requestedPage = (processArr[i].refs[processArr[i].count] / pageSize);
+                            }
+                        } else {
+                            requestedPage = (processArr[i].refs[processArr[i].count] / pageSize);
+                        }
+                        // printFrameTable(frameTable);
                         String message = checkFrameTable(frameTable, processArr[i], requestedPage, time, algo, processArr, scanner);
                         System.out.printf("Process %d references word %d (page %d) at time %d: %s \n", i+1, processArr[i].refs[processArr[i].count], requestedPage, time, message);
                         System.out.printf("%d uses random number: %d\n", i+1, randomOS(scanner));
-                        // printFrameTable(frameTable);
                         time++;
                     }
                     
@@ -105,7 +128,7 @@ public class Paging {
     Find the starting w for each process, and store in a processArr
     */
     public static Process[] startProcesses(int machineSize, int pageSize, int processSize, int jobMix, int numRef, int debug){
-        Process[] processArr;
+        Process[] processArr = new Process[4];
         if (jobMix == 1){
             int w = (111 * 1 + processSize) % processSize;
             processArr = new Process[1];
@@ -117,7 +140,48 @@ public class Paging {
                 w = (w + 1 + processSize) % processSize;
             }
             processArr[0].refs = refs;
-        } else {
+        } else if (jobMix == 3){
+            int k = 1;
+            processArr = new Process[4];
+            // we need a new way for figuring out how to get all the addresses
+            // that the process will ask for
+            for (int i = 0; i < 4; i ++){
+                int[] refs = new int[numRef];
+                int w = (111 * (i+1) + processSize) % processSize;
+                processArr[i] = new Process(w, i+1);
+                for (int j = 0; j < numRef; j++){
+                    System.out.println(w);
+                    refs[j] = w;
+                    w = (w + 1 + processSize) % processSize;
+                }
+                processArr[i].refs = refs;
+                k++;
+            }
+            // for (int k = 0; k < (int) Math.ceil((double) numRef * numProcesses / 3); k++){
+            //     // each process
+            //     for (int i = 0; i < numProcesses; i++){
+            //         // should go three times
+            //         for (int j = 0; j < 3; j++){
+            //             // unless it has already gone enough times
+            //             if (processArr[i].count >= numRef - 1){
+            //                 break;
+            //             } else {
+            //                 processArr[i].count++;
+            //                 // find the requested page number
+
+            //                 int requestedPage = (processArr[i].refs[processArr[i].count] / pageSize);
+            //                 String message = checkFrameTable(frameTable, processArr[i], requestedPage, time, algo, processArr, scanner);
+            //                 System.out.printf("Process %d references word %d (page %d) at time %d: %s \n", i+1, processArr[i].refs[processArr[i].count], requestedPage, time, message);
+            //                 System.out.printf("%d uses random number: %d\n", i+1, randomOS(scanner));
+            //                 // printFrameTable(frameTable);
+            //                 time++;
+            //             }
+                        
+            //         }
+            //     }
+            // }
+        } 
+        else if (jobMix == 2){
             int k = 1;
             processArr = new Process[4];
             for (int i = 0; i < 4; i ++){
