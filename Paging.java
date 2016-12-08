@@ -45,19 +45,21 @@ public class Paging {
         // Setup stuff
 
         Process[] processArr = startProcesses(machineSize, pageSize, processSize, jobMix, numRef, debug); printProcesses(processArr);
-        createFrameTable(machineSize, pageSize, processSize, jobMix, numRef, debug);
+        Entry[][] frameTable = createFrameTable(machineSize, pageSize, processSize, jobMix, numRef, debug);
 
         // Determine proper algorithm
 
         if (algo.equals("lru")){
-            lru(machineSize, pageSize, processSize, jobMix, numRef, debug, processArr);
+            lru(machineSize, pageSize, processSize, jobMix, numRef, debug, processArr, frameTable);
         }
+
+        displayOutput(processArr);
     }
 
-    public static void lru(int machineSize, int pageSize, int processSize, int jobMix, int numRef, int debug, Process[] processArr){
+    public static void lru(int machineSize, int pageSize, int processSize, int jobMix, int numRef, int debug, Process[] processArr, Entry[][] frameTable){
         System.out.printf("LRU starting! \n");
         int numProcesses = 4;
-        if (jobMix == 1 || jobMix == 4){
+        if (jobMix == 1){
             numProcesses = 1;
         } 
 
@@ -72,7 +74,12 @@ public class Paging {
                         break;
                     } else {
                         processArr[i].count++;
-                        System.out.printf("Process %d references word %d (page XX) at time %d\n", i+1, processArr[i].refs[processArr[i].count], time);
+                        // find the requested page number
+
+                        int requestedPage = (processArr[i].refs[processArr[i].count] / pageSize);
+                        String message = checkFrameTable(frameTable, processArr[i], requestedPage, time, "lru", processArr);
+                        System.out.printf("Process %d references word %d (page %d) at time %d: %s \n", i+1, processArr[i].refs[processArr[i].count], requestedPage, time, message);
+                        //printFrameTable(frameTable);
                         time++;
                     }
                     
@@ -86,11 +93,11 @@ public class Paging {
     */
     public static Process[] startProcesses(int machineSize, int pageSize, int processSize, int jobMix, int numRef, int debug){
         Process[] processArr;
-        if (jobMix == 1 || jobMix == 4){
+        if (jobMix == 1){
             int w = (111 * 1 + processSize) % processSize;
             processArr = new Process[1];
             int[] refs = new int[numRef];
-            processArr[0] = new Process(w);
+            processArr[0] = new Process(w, 1);
             for (int i = 0; i < numRef; i++){
                 System.out.println(w);
                 refs[i] = w;
@@ -103,7 +110,7 @@ public class Paging {
             for (int i = 0; i < 4; i ++){
                 int[] refs = new int[numRef];
                 int w = (111 * (i+1) + processSize) % processSize;
-                processArr[i] = new Process(w);
+                processArr[i] = new Process(w, i+1);
                 for (int j = 0; j < numRef; j++){
                     System.out.println(w);
                     refs[j] = w;
@@ -123,20 +130,19 @@ public class Paging {
                 frameTable[i][j] = new Entry(-1, -1, -1, -1);
             }
         }
-
         printFrameTable(frameTable);
-
         return frameTable;
     }
 
     public static void printFrameTable(Entry[][] frameTable){
-        System.out.printf("+----------+----+----+----+----+----+----+----+----+----+----+\n");
+        System.out.printf("+----------+----------+----+----+----+----+----+----+----+----+----+----+\n");
         for (int i = 0; i < frameTable.length; i++){
             System.out.printf("| Frame %2d |", i);
+            System.out.printf("P#%2d Pg%2d |", frameTable[i][0].processNum, frameTable[i][0].pageNum);
             for (int j = 0; j < frameTable[0].length; j++){
                 System.out.printf("%3d |", frameTable[i][j].address);
             }
-            System.out.printf("\n+----------+----+----+----+----+----+----+----+----+----+----+");
+            System.out.printf("\n+----------+----------+----+----+----+----+----+----+----+----+----+----+");
             System.out.printf("\n");
         }
     }
@@ -150,9 +156,90 @@ public class Paging {
             System.out.printf("     Residency Time: %d\n", processArr[i].residencyTime);
         }
     }
+
+    public static String checkFrameTable(Entry[][] frameTable, Process process, int requestedPage, int time, String algo, Process[] processArr){
+        boolean found = false;
+        int location = -1;
+        for (int i = 0; i < frameTable.length; i++){
+            if (frameTable[i][0].processNum == process.processNum && frameTable[i][0].pageNum == requestedPage){
+                found = true;
+                location = i;
+                break;
+            }
+        }
+        if (found){
+            frameTable[location][0].lastTimeUsed = time;
+            return "Hit in frame " + location;
+        } else {
+            return "Fault, " + handleFault(frameTable, process, requestedPage, time, algo, processArr);
+        }
+    }
+
+    public static String handleFault(Entry[][] frameTable, Process process, int requestedPage, int time, String algo, Process[] processArr){
+        String message = "";
+        process.faults++;
+
+        // if: there are free frames, choose the highest numbered free frame
+        int highestFreeFrame = highestFreeFrame(frameTable);
+        if (highestFreeFrame != -1){
+            int frame = insertPage(frameTable, process, requestedPage, highestFreeFrame, time);
+            message = "using free frame " + frame;
+        } else{
+            if (algo.equals("lru")){
+                // evict the one that has been unused for the longest time
+                int minTime = Integer.MAX_VALUE;
+                int toEvict = -1;
+                for (int i = 0; i < frameTable.length; i++){
+                    if (frameTable[i][0].lastTimeUsed < minTime){
+                        minTime = frameTable[i][0].lastTimeUsed;
+                        toEvict = i;
+                    }
+                }
+                message = "evicting page " + frameTable[toEvict][0].pageNum + " of process " + frameTable[toEvict][0].processNum + " from frame " + toEvict;
+                processArr[frameTable[toEvict][0].processNum - 1].residencyTime += (time - frameTable[toEvict][0].loadTime);
+                processArr[frameTable[toEvict][0].processNum - 1].evictions++;
+                insertPage(frameTable, process, requestedPage, toEvict, time);
+            }
+        }
+
+        // else: use the given algorithm to figure out which page to evict
+        return message;
+    }
+
+    public static int highestFreeFrame(Entry[][] frameTable){
+        int freeFrame = -1;
+        for (int i = frameTable.length - 1; i > -1; i--){
+            if (frameTable[i][0].processNum == -1 && frameTable[i][0].pageNum == -1){
+                freeFrame = i;
+                break;
+            }
+        }
+        return freeFrame;
+    }
+
+    public static int insertPage(Entry[][] frameTable, Process process, int requestedPage, int highestFreeFrame, int time){
+        int pageAddress = frameTable[highestFreeFrame].length * requestedPage;
+        for (int i = 0; i < frameTable[highestFreeFrame].length; i++){
+            frameTable[highestFreeFrame][i] = new Entry(pageAddress, time, process.processNum, requestedPage);
+            pageAddress++;
+        }
+        return highestFreeFrame;
+    }
+
+    public static void displayOutput(Process[] processArr){
+        System.out.printf("\n");
+        for (int i = 0; i < processArr.length; i++){
+            if (processArr[i].evictions == 0){
+                System.out.printf("Process %d had %d faults\n     With no evictions, the average residence is undefined. \n", i+1, processArr[i].faults);
+            } else {
+                System.out.printf("Process %d had %d faults and %f average residency. \n", i+1, processArr[i].faults, (float) processArr[i].residencyTime/processArr[i].evictions);
+            }
+        }
+    }
 }
 
 class Process {
+    public int processNum;
     public int w;
     public int count = -1;
     public int faults = 0;
@@ -160,7 +247,8 @@ class Process {
     public int residencyTime = 0; // time that the page was evicted minus the time it was loaded.
     public int[] refs;
 
-    public Process(int w){
+    public Process(int w, int processNum){
+        this.processNum = processNum;
         this.w = w;
     }
 
@@ -171,6 +259,7 @@ class Entry {
     public int loadTime;
     public int processNum;
     public int pageNum;
+    public int lastTimeUsed = -1;
     public int evictTime = 0;
 
     public Entry(int address, int loadTime, int processNum, int pageNum){
